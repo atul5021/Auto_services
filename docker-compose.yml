@@ -1,0 +1,72 @@
+version: '3.1'
+
+services:
+
+  lprometheus:
+    image: prom/prometheus
+    container_name: local_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-data/prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: always
+    networks:
+      - atul-net
+#------------------------------------------------------------------------------------
+
+  lnode_exporter:
+    image: prom/node-exporter:latest
+    container_name: local_node_exporter
+    ports:
+      - "9100:9100"
+
+    depends_on:
+      - lprometheus
+    networks:
+      - atul-net
+#------------------------------------------------------------------------------------
+
+  lgrafana:
+    image: grafana/grafana
+    container_name: local_grafana   
+    ports:
+      - "3000:3000"  
+    depends_on:
+      - lprometheus
+    restart: always
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana_config/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana_config/provisioning/dashboards:/var/lib/grafana/dashboards
+      - ./grafana_config/provisioning/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - atul-net
+
+#------------------------------------------------------------------------------------
+
+  luptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: local_uptime_kuma
+    volumes:
+      - ./data:/app/data
+    ports:
+      - 3001:3001
+    depends_on:
+      - lprometheus
+      - lgrafana
+    restart: unless-stopped
+    networks:
+      - atul-net
+#------------------------------------------------------------------------------------   
+
+networks:
+  atul-net:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+
+
+
